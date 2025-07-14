@@ -1,0 +1,13 @@
+# pyproject.toml
+
+[project]
+name = "pymcp"
+version = "0.1.0"
+description = "A Modern Context Protocol (MCP) implementation using WebSockets and JSON."
+dependencies = [
+    "websockets",
+    "pydantic"
+]
+
+[tool.setuptools]
+packages = ["mcp"]

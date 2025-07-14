@@ -1,7 +1,7 @@
 import inspect
 from typing import Any, Callable, Dict, List
 
-from protocols.tools_def import ToolArgument, ToolDefinition
+from pymcp.protocols.tools_def import ToolArgument, ToolDefinition
 
 # TODO: the tools registry should be a configurable file?
 

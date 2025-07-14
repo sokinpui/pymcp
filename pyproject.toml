@@ -9,5 +9,5 @@ dependencies = [
     "pydantic"
 ]
 
-[tool.setuptools]
-packages = ["mcp"]
+[tool.setuptools.packages.find]
+where = ["src"]

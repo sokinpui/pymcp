@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from protocols.responses import ServerMessage
+from pymcp.protocols.responses import ServerMessage
 
 
 class ExecutionCommand(BaseModel):

@@ -3,8 +3,9 @@
 import asyncio
 
 import websockets
-from tools.registry import ToolRegistry
 from websockets.server import WebSocketServerProtocol
+
+from pymcp.tools.registry import ToolRegistry
 
 from .commands import ExecutionCommand, ResponseCommand
 from .connection_manager import ConnectionManager

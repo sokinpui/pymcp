@@ -1,19 +1,19 @@
-# server/router.py
+# src/pymcp/server/router.py
 
 import asyncio
 from uuid import UUID
 
 from pydantic import ValidationError
 
-from protocols.base_msg import Error
-from protocols.requests import ClientMessage, ToolCallRequest
-from protocols.responses import (
+from pymcp.protocols.base_msg import Error
+from pymcp.protocols.requests import ClientMessage, ToolCallRequest
+from pymcp.protocols.responses import (
     ErrorResponse,
     ListToolsResponse,
     ListToolsResponseBody,
     ServerMessage,
 )
-from tools.registry import ToolRegistry
+from pymcp.tools.registry import ToolRegistry
 
 from .commands import ExecutionCommand
 

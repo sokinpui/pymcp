@@ -1,9 +1,13 @@
 # mcp_server/worker.py
 import asyncio
 
-from protocols.base_msg import Error
-from protocols.responses import ErrorResponse, ToolCallResponse, ToolCallResponseBody
-from tools.registry import ToolRegistry
+from pymcp.protocols.base_msg import Error
+from pymcp.protocols.responses import (
+    ErrorResponse,
+    ToolCallResponse,
+    ToolCallResponseBody,
+)
+from pymcp.tools.registry import ToolRegistry
 
 from .commands import ExecutionCommand, ResponseCommand
 from .connection_manager import ConnectionManager

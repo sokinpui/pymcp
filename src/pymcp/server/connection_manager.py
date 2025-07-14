@@ -9,7 +9,7 @@ import websockets
 # TODO: this is legacy
 from websockets.server import WebSocketServerProtocol
 
-from protocols.responses import ServerMessage
+from pymcp.protocols.responses import ServerMessage
 
 
 class ConnectionManager:

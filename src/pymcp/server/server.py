@@ -1,4 +1,7 @@
-# server/server.py
+# src/pymcp/server/server.py
+"""
+The main MCP server orchestrator.
+"""
 
 import asyncio
 
@@ -11,12 +14,14 @@ from .commands import ExecutionCommand, ResponseCommand
 from .connection_manager import ConnectionManager
 from .router import Router
 from .sender import SenderWorker
+from .validator import Validator
 from .worker import ExecutorWorker
 
 
 class MCPServer:
     """
-    Router -> WorkQueue -> Executor -> ResponseQueue -> Sender -> ConnectionManager
+    The main server class that orchestrates the entire request-response pipeline.
+    Flow: ConnectionManager -> Validator -> Router -> WorkQueue -> Executor -> ResponseQueue -> Sender
     """
 
     def __init__(
@@ -36,11 +41,12 @@ class MCPServer:
         self.tool_registry = tool_registry
         self.connection_manager = ConnectionManager()
 
-        # Queues (the "data tunnels")
+        # Queues for inter-component communication
         self.work_queue: asyncio.Queue[ExecutionCommand] = asyncio.Queue()
         self.response_queue: asyncio.Queue[ResponseCommand] = asyncio.Queue()
 
         # Pipeline stages
+        self.validator = Validator(self.response_queue)
         self.router = Router(self.tool_registry, self.work_queue)
         self.executors: list[ExecutorWorker] = []
         self.senders: list[SenderWorker] = []
@@ -51,14 +57,25 @@ class MCPServer:
         """The main WebSocket handler for each client connection."""
         connection_id = await self.connection_manager.connect(websocket)
         try:
-            async for message in websocket:
-                immediate_response = await self.router.route_request(
-                    message, connection_id
+            async for message_json in websocket:
+                # 1. Validate the incoming raw message.
+                # If invalid, the validator queues an error and returns None.
+                validated_message = await self.validator.validate_message(
+                    message_json, connection_id
                 )
+                if not validated_message:
+                    continue  # Move to the next message
+
+                # 2. Route the validated message.
+                # The router may return an immediate response or None for queued tasks.
+                immediate_response = await self.router.route_request(
+                    validated_message, connection_id
+                )
+
+                # 3. Queue any immediate response.
                 if immediate_response:
-                    # For simple requests (like list_tools or validation errors),
-                    # create a ResponseCommand and queue it for the SenderWorker.
-                    # This maintains a consistent outbound path.
+                    # For simple/synchronous requests (e.g., list_tools, routing errors),
+                    # queue the response to be sent by a SenderWorker.
                     response_command = ResponseCommand(
                         connection_id=connection_id, message=immediate_response
                     )

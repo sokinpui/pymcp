@@ -1,9 +1,10 @@
 # src/pymcp/server/router.py
+"""
+Component responsible for routing validated requests.
+"""
 
 import asyncio
 from uuid import UUID
-
-from pydantic import ValidationError
 
 from pymcp.protocols.base_msg import Error
 from pymcp.protocols.requests import ClientMessage, ToolCallRequest
@@ -19,11 +20,10 @@ from .commands import ExecutionCommand
 
 
 class Router:
-    # TODO: it should only routes request, parser should be handle by other component
     """
-    Parses incoming messages, routes them to the correct logic.
+    Routes validated incoming messages.
     For tool calls, it places a command on a work queue.
-    For simple queries, it responds directly by placing a response on the response queue.
+    For simple queries, it responds directly by returning a response message.
     """
 
     def __init__(self, tool_registry: ToolRegistry, work_queue: asyncio.Queue):
@@ -31,39 +31,30 @@ class Router:
         self.work_queue: asyncio.Queue = work_queue
 
     async def route_request(
-        self, message_json: str, connection_id: UUID
+        self, message: ClientMessage, connection_id: UUID
     ) -> ServerMessage | None:
         """
-        Parses and routes a client request.
-        This function returns a ServerMessage if an immediate response (like validation error or list_tools)
-        can be generated, or None if the request is queued for asynchronous processing by an executor.
+        Routes a validated client request.
+        This function returns a ServerMessage for immediate responses (like list_tools)
+        or None if the request is queued for asynchronous processing.
         """
-        try:
-            message = ClientMessage.model_validate_json(message_json)
-        except ValidationError as e:
-            # For validation errors, we can't get a correlation_id, so we send an un-correlated error.
-            return ErrorResponse(
-                header={
-                    "correlation_id": "00000000-0000-0000-0000-000000000000",
-                    "status": "error",
-                },
-                error=Error(code="validation_error", message=str(e)),
-            )
-
-        # Route based on the message type
+        # Route based on the message type. Validation is assumed to be done.
         match message.type:
             case "list_tools":
-                # This is a synchronous, simple request. Handle it directly and return the response.
+                # This is a synchronous, simple request. Handle it directly.
                 return self._handle_list_tools(message.header.correlation_id)
 
             case "tool_call":
                 # This is an asynchronous request. Queue it for a worker.
+                # The validator ensures `message` is a valid `ToolCallRequest`.
                 await self._queue_tool_call(message, connection_id)
-                # Return None to signify no immediate response should be sent by the server handler;
-                # the response will come from a sender worker later.
+                # Return None to signify no immediate response. The response
+                # will be sent later by a SenderWorker.
                 return None
 
             case _:
+                # This case is theoretically unreachable if the ClientMessage Union
+                # is comprehensive, but it's a good safeguard.
                 return ErrorResponse(
                     header={
                         "correlation_id": message.header.correlation_id,
@@ -78,7 +69,6 @@ class Router:
     def _handle_list_tools(self, correlation_id: UUID) -> ListToolsResponse:
         """
         Handles the request to list all available tools.
-        This is a synchronous operation.
         """
         tool_defs = self.tool_registry.get_all_definitions()
         return ListToolsResponse(

@@ -39,7 +39,7 @@ class MCPServer:
         # Core components (services)
         self.connection_manager = ConnectionManager()
         self.validator = Validator()
-        self.router = Router(tool_registry)
+        self.router = Router()
         self.tool_executor = ToolExecutor(tool_registry)
         self.response_sender = ResponseSender(self.connection_manager)
 
@@ -149,3 +149,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

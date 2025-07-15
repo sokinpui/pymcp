@@ -12,17 +12,19 @@ def main():
     parser.add_argument("--port", type=int, default=8765, help="Server port")
     args = parser.parse_args()
 
-    # Initialize tool registry (this should be defined in your application)
+    # In a real app, you would register your tools here.
     tool_registry = ToolRegistry()
 
     server = MCPServer(
         host=args.host,
         port=args.port,
         tool_registry=tool_registry,
-        num_executors=2,
-        num_senders=1,
     )
-    asyncio.run(server.start())
+
+    try:
+        asyncio.run(server.start())
+    except KeyboardInterrupt:
+        print("MCP Server stopped.")
 
 
 if __name__ == "__main__":

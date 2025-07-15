@@ -1,21 +1,13 @@
-# protocols/responses.py
-
+# src/pymcp/protocols/responses.py
 from typing import Any, List, Literal, Union
 
 from pydantic import BaseModel
 
 from .base_msg import MCPResponse
-from .tools_def import ToolDefinition
 
 
-# List Tools Response
-class ListToolsResponseBody(BaseModel):
-    tools: List[ToolDefinition]
-
-
-class ListToolsResponse(MCPResponse):
-    type: Literal["list_tools_response"] = "list_tools_response"
-    body: ListToolsResponseBody
+# NOTE: ListToolsResponse has been removed.
+# The list of tools is now returned in the body of a standard ToolCallResponse.
 
 
 # Tool Call Response
@@ -36,4 +28,5 @@ class ErrorResponse(MCPResponse):
 
 
 # Union of all possible responses
-ServerMessage = Union[ListToolsResponse, ToolCallResponse, ErrorResponse]
+ServerMessage = Union[ToolCallResponse, ErrorResponse]
+

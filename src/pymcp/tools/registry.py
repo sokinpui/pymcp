@@ -1,9 +1,8 @@
+# src/pymcp/tools/registry.py
 import inspect
 from typing import Any, Callable, Dict, List
 
 from pymcp.protocols.tools_def import ToolArgument, ToolDefinition
-
-# TODO: the tools registry should be a configurable file?
 
 
 class Tool:

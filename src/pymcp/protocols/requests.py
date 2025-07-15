@@ -1,5 +1,4 @@
-# protocols/requests.py
-
+# src/pymcp/protocols/requests.py
 from typing import Any, Dict, Literal, Union
 
 from pydantic import BaseModel, Field
@@ -7,16 +6,8 @@ from pydantic import BaseModel, Field
 from .base_msg import Header, MCPRequest
 
 
-# List Tools
-class ListToolsRequestBody(BaseModel):
-    # NOTE: may support "categories" in the future
-    pass
-
-
-class ListToolsRequest(MCPRequest):
-    header: Header = Field(default_factory=lambda: Header(status="success"))
-    type: Literal["list_tools"] = "list_tools"
-    body: ListToolsRequestBody = Field(default_factory=ListToolsRequestBody)
+# NOTE: ListToolsRequest has been removed.
+# Listing tools is now done via a standard tool call to the internal 'list_tools' tool.
 
 
 # Tool Call
@@ -32,4 +23,5 @@ class ToolCallRequest(MCPRequest):
 
 
 # Union of all possible requests
-ClientMessage = Union[ListToolsRequest, ToolCallRequest]
+ClientMessage = Union[ToolCallRequest]
+

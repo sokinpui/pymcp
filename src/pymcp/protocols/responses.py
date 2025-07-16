@@ -6,10 +6,6 @@ from pydantic import BaseModel
 from .base_msg import MCPResponse
 
 
-# NOTE: ListToolsResponse has been removed.
-# The list of tools is now returned in the body of a standard ToolCallResponse.
-
-
 # Tool Call Response
 class ToolCallResponseBody(BaseModel):
     tool_name: str
@@ -29,4 +25,3 @@ class ErrorResponse(MCPResponse):
 
 # Union of all possible responses
 ServerMessage = Union[ToolCallResponse, ErrorResponse]
-

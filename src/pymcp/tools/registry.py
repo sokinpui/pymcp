@@ -1,4 +1,5 @@
-# src/pymcp/tools/registry.py
+# src/pymcp/tools/registry.p
+import asyncio
 import inspect
 from typing import Any, Callable, Dict, List
 
@@ -6,12 +7,11 @@ from pymcp.protocols.tools_def import ToolArgument, ToolDefinition
 
 
 class Tool:
-    """A wrapper for a callable tool."""
+    """
+    A wrapper for a callable tool that can be either sync or async.
+    """
 
     def __init__(self, name: str, func: Callable, description: str):
-        if not inspect.iscoroutinefunction(func):
-            # NOTE: I think this should be handle by the executor, not here
-            raise TypeError("Tool function must be an async function.")
         self.name = name
         self.func = func
         self.description = description
@@ -42,8 +42,15 @@ class Tool:
         return args
 
     async def execute(self, **kwargs: Any) -> Any:
-        """Executes the tool with the given keyword arguments."""
-        return await self.func(**kwargs)
+        """
+        Executes the tool with the given keyword arguments.
+        Runs synchronous functions in a thread pool to avoid blocking the
+        asyncio event loop.
+        """
+        if inspect.iscoroutinefunction(self.func):
+            return await self.func(**kwargs)
+        else:
+            return await asyncio.to_thread(self.func, **kwargs)
 
     def get_definition(self) -> ToolDefinition:
         """Returns the serializable definition of the tool."""

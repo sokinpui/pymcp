@@ -7,7 +7,7 @@ import asyncio
 from uuid import UUID
 
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets.server import ServerConnection
 
 from pymcp.protocols.base_msg import Error
 from pymcp.protocols.requests import ClientMessage, ToolCallRequest
@@ -46,7 +46,14 @@ class MCPServer:
         # To keep track of running tasks for graceful shutdown
         self._running_tasks: set[asyncio.Task] = set()
 
-    async def _handler(self, websocket: WebSocketServerProtocol):
+    def update_tool_registry(self, new_registry: ToolRegistry):
+        """
+        Atomically updates the tool registry used by the tool executor.
+        """
+        print("Server received updated tool registry.")
+        self.tool_executor.tool_registry = new_registry
+
+    async def _handler(self, websocket: ServerConnection):
         """The main WebSocket handler for each client connection."""
         connection_id = await self.connection_manager.connect(websocket)
         try:
@@ -90,7 +97,10 @@ class MCPServer:
         else:
             # Safeguard if router logic and this logic diverge
             response_message = ErrorResponse(
-                header={"correlation_id": message.header.correlation_id, "status": "error"},
+                header={
+                    "correlation_id": message.header.correlation_id,
+                    "status": "error",
+                },
                 error=Error(
                     code="internal_server_error",
                     message=f"Server could not handle request type '{message.type}'.",
@@ -100,53 +110,23 @@ class MCPServer:
         # 4. Send Response
         await self.response_sender.send(connection_id, response_message)
 
-    async def _shutdown(self):
-        """Gracefully shuts down all running tasks."""
+    async def _shutdown_client_tasks(self):
+        """Gracefully shuts down all client-processing tasks."""
         if not self._running_tasks:
             return
-        print(f"Shutting down... waiting for {len(self._running_tasks)} tasks to complete.")
+        print(f"Shutting down {len(self._running_tasks)} client tasks...")
         await asyncio.gather(*self._running_tasks, return_exceptions=True)
-        print("All tasks completed.")
-
+        print("All client tasks completed.")
 
     async def start(self):
-        """Starts the WebSocket server."""
+        """Starts the WebSocket server and serves until cancelled."""
         print(f"Starting MCP Server on ws://{self.host}:{self.port}")
-        server = await websockets.serve(self._handler, self.host, self.port)
-
         try:
-            await asyncio.Future()  # Run forever
-        except (KeyboardInterrupt, asyncio.CancelledError):
-            print("Server shutting down.")
+            # The websockets.serve context manager handles server startup and shutdown.
+            async with websockets.serve(self._handler, self.host, self.port):
+                await asyncio.Future()  # Run forever
+        except asyncio.CancelledError:
+            print("Server shutdown signal received.")
         finally:
-            server.close()
-            await server.wait_closed()
-            await self._shutdown()
-
-
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Start the MCP WebSocket server.")
-    parser.add_argument("--host", type=str, default="localhost", help="Server host")
-    parser.add_argument("--port", type=int, default=8765, help="Server port")
-    args = parser.parse_args()
-
-    # In a real app, you would register your tools here.
-    tool_registry = ToolRegistry()
-
-    server = MCPServer(
-        host=args.host,
-        port=args.port,
-        tool_registry=tool_registry,
-    )
-    
-    try:
-        asyncio.run(server.start())
-    except KeyboardInterrupt:
-        print("MCP Server stopped.")
-
-
-if __name__ == "__main__":
-    main()
-
+            await self._shutdown_client_tasks()
+            print("Server has stopped.")

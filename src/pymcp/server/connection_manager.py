@@ -1,13 +1,10 @@
-# server/connection_manager.py
-
+# src/pymcp/server/connection_manager.py
 import asyncio
 from typing import Dict
 from uuid import UUID, uuid4
 
 import websockets
-
-# TODO: this is legacy
-from websockets.server import WebSocketServerProtocol
+from websockets.server import ServerConnection
 
 from pymcp.protocols.responses import ServerMessage
 
@@ -16,11 +13,11 @@ class ConnectionManager:
     """Manages active WebSocket connections."""
 
     def __init__(self):
-        self.active_connections: Dict[UUID, WebSocketServerProtocol] = {}
+        self.active_connections: Dict[UUID, ServerConnection] = {}
 
-    async def connect(self, websocket: WebSocketServerProtocol) -> UUID:
+    async def connect(self, websocket: ServerConnection) -> UUID:
         """Registers a new connection."""
-        await websocket.accept()
+        # websocket.accept() is not needed with the high-level websockets.serve()
         connection_id = uuid4()
         self.active_connections[connection_id] = websocket
         print(f"New connection established: {connection_id}")

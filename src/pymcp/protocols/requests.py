@@ -17,5 +17,4 @@ class ToolCallRequest(MCPRequest):
     body: ToolCallRequestBody
 
 
-# The primary and only request type.
 ClientMessage = ToolCallRequest

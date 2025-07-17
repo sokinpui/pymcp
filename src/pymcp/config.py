@@ -23,5 +23,3 @@ TOOL_REPOS = CORE_TOOL_REPOS + USER_TOOL_REPOS
 # Server network settings
 SERVER_HOST = "localhost"
 SERVER_PORT = 8765
-
-print(TOOL_REPOS)

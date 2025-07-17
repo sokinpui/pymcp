@@ -1,9 +1,18 @@
 # src/pymcp/protocols/responses.py
-from typing import Any, Union
+from typing import Any, Literal, Union
 
 from pydantic import BaseModel
 
-from .base_msg import MCPResponse, Error
+from .base_msg import Error, Header, MCPResponse
+
+
+# Define specialized Header models for discriminated union
+class SuccessHeader(Header):
+    status: Literal["success"] = "success"
+
+
+class ErrorHeader(Header):
+    status: Literal["error"]
 
 
 # Tool Call Response
@@ -13,14 +22,19 @@ class ToolCallResponseBody(BaseModel):
 
 
 class ToolCallResponse(MCPResponse):
+    """A response indicating a successful tool execution."""
+
+    header: SuccessHeader
     body: ToolCallResponseBody
+    error: None = None
 
 
-# Error Response (for cases where a valid request leads to an error)
 class ErrorResponse(MCPResponse):
-    body: None = None  # An error response never has a body
-    error: Error  # An error response must have an error object
+    """A response indicating an error occurred during processing."""
+
+    header: ErrorHeader
+    body: None = None
+    error: Error
 
 
-# Union of all possible responses for server-side type hinting
 ServerMessage = Union[ToolCallResponse, ErrorResponse]

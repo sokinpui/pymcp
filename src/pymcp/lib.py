@@ -53,7 +53,7 @@ class ServerHandle:
 async def start_server(
     host: Optional[str] = None,
     port: Optional[int] = None,
-    tool_repos: Optional[List[str]] = None,
+    user_tool_repos: Optional[List[str]] = None,
 ) -> ServerHandle:
     """
     Starts the MCP server and tool watcher as a library call.
@@ -62,17 +62,35 @@ async def start_server(
     a `ServerHandle` object to manage its lifecycle.
 
     Args:
-        host: The network host to bind the server to. Defaults to `config.SERVER_HOST`.
-        port: The port to listen on. Defaults to `config.SERVER_PORT`.
-        tool_repos: A list of directory paths to search for tools. Defaults to
-                    `config.TOOL_REPOS`.
+        host: The network host to bind the server to. If None, uses the value
+              from config/environment variables (defaults to 'localhost').
+        port: The port to listen on. If None, uses the value from config/environment
+              variables (defaults to 8765).
+        user_tool_repos: A list of directory paths to search for user tools.
+                         If provided, this list REPLACES any repos defined in
+                         configuration (env/.env file). If None, repos from
+                         configuration are used. The core tools repository is
+                         always included.
 
     Returns:
         A `ServerHandle` instance for controlling the running server.
     """
-    server_host = host or config.SERVER_HOST
-    server_port = port or config.SERVER_PORT
-    tool_repo_paths = tool_repos or config.TOOL_REPOS
+    server_host = host if host is not None else config.settings.host
+    server_port = port if port is not None else config.settings.port
+
+    # If user_tool_repos is explicitly passed, it takes precedence over settings.
+    # Otherwise, use the repos from the settings (env/.env file).
+    repos_to_load = (
+        user_tool_repos
+        if user_tool_repos is not None
+        else config.settings.user_tool_repos
+    )
+
+    # The final list always includes the core tool repo.
+    # Use dict.fromkeys to remove duplicates while preserving order.
+    tool_repo_paths = list(
+        dict.fromkeys([str(config.CORE_TOOL_REPOS_PATH)] + repos_to_load)
+    )
 
     tool_loader = ToolLoader(repo_paths=tool_repo_paths)
     initial_registry = tool_loader.load_registry()
@@ -98,4 +116,3 @@ async def start_server(
     )
 
     return ServerHandle(server_task=server_task, watcher_task=watcher_task)
-

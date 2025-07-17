@@ -69,40 +69,50 @@ def run_cli():
     parser.add_argument(
         "--host",
         type=str,
-        default=config.SERVER_HOST,
-        help=f"Server host (default: {config.SERVER_HOST})",
+        default=config.settings.host,
+        help=f"Server host. Env: PYMCP_HOST (default: {config.settings.host})",
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=config.SERVER_PORT,
-        help=f"Server port (default: {config.SERVER_PORT})",
+        default=config.settings.port,
+        help=f"Server port. Env: PYMCP_PORT (default: {config.settings.port})",
     )
     parser.add_argument(
         "--tool-repo",
         action="append",
-        dest="tool_repos",
-        help="Path to a tool repository. Can be specified multiple times.",
+        dest="cli_tool_repos",
+        default=[],
+        help="Path to a user tool repository. Can be specified multiple times. "
+        "Adds to repos from PYMCP_USER_TOOL_REPOS.",
     )
     parser.add_argument(
         "--log-level",
         type=str,
-        default="INFO",
+        default=config.settings.log_level,
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Set the logging level (default: INFO)",
+        help=f"Set the logging level. Env: PYMCP_LOG_LEVEL (default: {config.settings.log_level})",
     )
 
     args = parser.parse_args()
 
-    # If --tool-repo is not specified, use the default from config
-    tool_repos = args.tool_repos or config.TOOL_REPOS
+    # Combine tool repositories: Core + Configured (env/file) + CLI.
+    # config.settings.user_tool_repos has repos from .env or env vars.
+    # args.cli_tool_repos has repos from the command line.
+    all_user_repos = config.settings.user_tool_repos + args.cli_tool_repos
 
-    # Configure logging for the entire application
-    log_level = getattr(logging, args.log_level.upper(), logging.INFO)
-    setup_logging(level=log_level)
+    # The final list always includes the core tools path first.
+    # Use dict.fromkeys to remove duplicates while preserving order.
+    final_tool_repos = list(
+        dict.fromkeys([str(config.CORE_TOOL_REPOS_PATH)] + all_user_repos)
+    )
+
+    # Configure logging for the entire application. The CLI arg takes precedence.
+    log_level_value = getattr(logging, args.log_level.upper())
+    setup_logging(level=log_level_value)
 
     try:
-        asyncio.run(main(host=args.host, port=args.port, tool_repos=tool_repos))
+        asyncio.run(main(host=args.host, port=args.port, tool_repos=final_tool_repos))
     except KeyboardInterrupt:
         pass
 

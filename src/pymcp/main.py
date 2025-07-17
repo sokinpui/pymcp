@@ -1,8 +1,10 @@
 # src/pymcp/main.py
 """
-Main entry point for the PyMCP application.
+Main entry point and CLI for the PyMCP application.
 """
+import argparse
 import asyncio
+from typing import List
 
 from pymcp import config
 from pymcp.server.server import MCPServer
@@ -10,59 +12,84 @@ from pymcp.tools.loader import ToolLoader
 from pymcp.tools.registry import ToolRegistry
 
 
-async def main():
-    """Main entry point for starting the MCP server and services."""
-    # 1. Initialize the Tool Loader from configuration
-    tool_loader = ToolLoader(repo_paths=config.TOOL_REPOS)
+async def main(host: str, port: int, tool_repos: List[str]):
+    """
+    Sets up and runs the MCP server and its related services.
 
-    # 2. Perform the initial load of the tool registry
+    Args:
+        host: The network host to bind the server to.
+        port: The port to listen on.
+        tool_repos: A list of directory paths to search for tools.
+    """
+    tool_loader = ToolLoader(repo_paths=tool_repos)
     initial_registry = tool_loader.load_registry()
 
-    # 3. Initialize the MCP Server from configuration
     server = MCPServer(
-        host=config.SERVER_HOST,
-        port=config.SERVER_PORT,
+        host=host,
+        port=port,
         tool_registry=initial_registry,
     )
 
-    # 4. Define the callback for when tools are updated
     async def on_registry_update(new_registry: ToolRegistry):
         server.update_tool_registry(new_registry)
 
-    # 5. Create and manage the main application tasks
-    server_task = asyncio.create_task(server.start(), name="MCPServer")
+    server_task = asyncio.create_task(server.start(), name="MCPServer_CLI")
     watcher_task = asyncio.create_task(
-        tool_loader.watch(on_registry_update), name="ToolWatcher"
+        tool_loader.watch(on_registry_update), name="ToolWatcher_CLI"
     )
 
     tasks = [server_task, watcher_task]
-    print("MCP Server and Tool Watcher are running. Press Ctrl+C to stop.")
+    print(
+        f"MCP Server and Tool Watcher are running on ws://{host}:{port}. Press Ctrl+C to stop."
+    )
 
     try:
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
-        # This is the correct exception to catch when asyncio.run() cancels the task.
-        print("\nShutdown requested by user.")
+        print("\nShutdown signal received.")
     finally:
         print("Cancelling main tasks...")
         for task in tasks:
             if not task.done():
                 task.cancel()
-        # Wait for all tasks to acknowledge cancellation and clean up
         await asyncio.gather(*tasks, return_exceptions=True)
         print("Application has shut down gracefully.")
 
 
-def run():
-    # To use the dynamic loader, you may need to: pip install watchdog
+def run_cli():
+    """
+    Parses command-line arguments and runs the main server function.
+    """
+    parser = argparse.ArgumentParser(description="PyMCP - Modern Context Protocol Server")
+    parser.add_argument(
+        "--host",
+        type=str,
+        default=config.SERVER_HOST,
+        help=f"Server host (default: {config.SERVER_HOST})",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=config.SERVER_PORT,
+        help=f"Server port (default: {config.SERVER_PORT})",
+    )
+    parser.add_argument(
+        "--tool-repo",
+        action="append",
+        dest="tool_repos",
+        help="Path to a tool repository. Can be specified multiple times.",
+    )
+
+    args = parser.parse_args()
+
+    # If --tool-repo is not specified, use the default from config
+    tool_repos = args.tool_repos or config.TOOL_REPOS
+
     try:
-        asyncio.run(main())
+        asyncio.run(main(host=args.host, port=args.port, tool_repos=tool_repos))
     except KeyboardInterrupt:
-        # asyncio.run() propagates KeyboardInterrupt after its own cleanup.
-        # We catch it here to prevent a traceback on normal Ctrl+C shutdown.
-        # The graceful shutdown logic is handled within main().
         pass
 
 
 if __name__ == "__main__":
-    run()
+    run_cli()

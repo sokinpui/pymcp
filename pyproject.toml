@@ -11,3 +11,6 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+pymcp-server = "pymcp.main:run_cli"

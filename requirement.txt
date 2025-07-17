@@ -1,3 +1,4 @@
 websockets
 pydantic
 watchdog
+pydantic-settings

@@ -6,11 +6,12 @@ version = "0.1.0"
 description = "A Modern Context Protocol (MCP) implementation using WebSockets and JSON."
 dependencies = [
     "websockets",
-    "pydantic"
+    "pydantic",
+    "pydantic-settings"
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [project.scripts]
-pymcp-server = "pymcp.main:run_cli"
+pymcp = "pymcp.main:run_cli"

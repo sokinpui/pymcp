@@ -1,6 +1,6 @@
-# protocols/tools_def.py
+# src/pymcp/protocols/tools_def.py
 
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel
 
 
@@ -9,7 +9,6 @@ class ToolArgument(BaseModel):
 
     name: str
     type: str
-    description: Optional[str] = None
     required: bool = True
 
 

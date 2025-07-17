@@ -11,7 +11,7 @@ from websockets.server import ServerConnection
 
 from pymcp.protocols.base_msg import Error
 from pymcp.protocols.requests import ClientMessage, ToolCallRequest
-from pymcp.protocols.responses import ErrorResponse, ServerMessage
+from pymcp.protocols.responses import ErrorResponse
 from pymcp.tools.registry import ToolRegistry
 
 from .connection_manager import ConnectionManager
@@ -90,22 +90,9 @@ class MCPServer:
             return
 
         # 3. Execute
-        response_message: ServerMessage
-        if message.type == "tool_call":
-            assert isinstance(message, ToolCallRequest)
-            response_message = await self.tool_executor.execute(message)
-        else:
-            # Safeguard if router logic and this logic diverge
-            response_message = ErrorResponse(
-                header={
-                    "correlation_id": message.header.correlation_id,
-                    "status": "error",
-                },
-                error=Error(
-                    code="internal_server_error",
-                    message=f"Server could not handle request type '{message.type}'.",
-                ),
-            )
+        # Since validation and routing passed, we know it's a valid tool call.
+        # As ClientMessage is an alias for ToolCallRequest, we can execute directly.
+        response_message = await self.tool_executor.execute(message)
 
         # 4. Send Response
         await self.response_sender.send(connection_id, response_message)

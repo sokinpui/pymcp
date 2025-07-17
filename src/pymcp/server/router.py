@@ -2,17 +2,15 @@
 """
 Component responsible for routing validated requests.
 """
-from pymcp.protocols.base_msg import Error
 from pymcp.protocols.requests import ClientMessage
-from pymcp.protocols.responses import ErrorResponse, ServerMessage
+from pymcp.protocols.responses import ServerMessage
 
 
 class Router:
     """
     Routes validated incoming messages.
-    It performs a primary check on the message type and passes supported
-    messages to the next stage of processing. For unsupported message types,
-    it constructs an error response.
+    With a single request type, this component is a simple pass-through but
+    is kept for architectural consistency and future extensibility.
     """
 
     def __init__(self):
@@ -22,27 +20,7 @@ class Router:
         """
         Routes a validated client request.
 
-        Returns None if the request requires asynchronous tool execution,
-        otherwise returns an immediate error response for unsupported types.
+        As there is only one supported request type (tool_call), this
+        method signals that the request should proceed to execution.
         """
-        # Since ClientMessage can currently only be ToolCallRequest, this is simple.
-        # We keep the match statement for clarity and future extensibility.
-        match message.type:
-            case "tool_call":
-                # Signal to the caller that this needs to be executed.
-                return None
-
-            case _:
-                # This case is theoretically unreachable if the ClientMessage Union
-                # is comprehensive and validation is correct.
-                return ErrorResponse(
-                    header={
-                        "correlation_id": message.header.correlation_id,
-                        "status": "error",
-                    },
-                    error=Error(
-                        code="unsupported_request",
-                        message=f"Request type '{message.type}' is not supported.",
-                    ),
-                )
-
+        return None

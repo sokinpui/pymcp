@@ -29,7 +29,7 @@ class ToolExecutor:
         Finds the requested tool, injects dependencies if needed, executes it,
         and builds a response message.
         """
-        tool_name = request.body.tool_name
+        tool_name = request.body.tool
         tool = self.tool_registry.get_tool(tool_name)
 
         if not tool:
@@ -57,7 +57,7 @@ class ToolExecutor:
 
             return ToolCallResponse(
                 header={"correlation_id": request.header.correlation_id, "status": "success"},
-                body=ToolCallResponseBody(tool_name=tool_name, result=result),
+                body=ToolCallResponseBody(tool=tool_name, result=result),
             )
         except Exception as e:
             # Provide a detailed error message for easier debugging.

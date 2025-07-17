@@ -34,7 +34,8 @@ class ToolExecutor:
 
         if not tool:
             return ErrorResponse(
-                header={"correlation_id": request.header.correlation_id, "status": "error"},
+                status="error",
+                header={"correlation_id": request.header.correlation_id},
                 error=Error(
                     code="tool_not_found",
                     message=f"Tool '{tool_name}' not found.",
@@ -55,14 +56,16 @@ class ToolExecutor:
 
             result = await tool.execute(**execution_args)
 
+            # status="success" is set by default in the ToolCallResponse model.
             return ToolCallResponse(
-                header={"correlation_id": request.header.correlation_id, "status": "success"},
+                header={"correlation_id": request.header.correlation_id},
                 body=ToolCallResponseBody(tool=tool_name, result=result),
             )
         except Exception as e:
             # Provide a detailed error message for easier debugging.
             return ErrorResponse(
-                header={"correlation_id": request.header.correlation_id, "status": "error"},
+                status="error",
+                header={"correlation_id": request.header.correlation_id},
                 error=Error(
                     code="execution_error",
                     message=f"Error executing tool '{tool_name}': {type(e).__name__}: {e}",

@@ -1,5 +1,4 @@
 # src/pymcp/protocols/base_msg.py
-from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -8,10 +7,11 @@ from pydantic import BaseModel, Field
 class Header(BaseModel):
     """
     Metadata for every MCP message.
+    The 'status' field was removed, as it is a response-specific concept
+    and is now a top-level field on response messages for discrimination.
     """
 
     correlation_id: UUID = Field(default_factory=uuid4)
-    status: Literal["success", "error"] = "success"
 
 
 class Error(BaseModel):

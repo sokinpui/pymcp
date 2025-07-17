@@ -7,6 +7,7 @@ from typing import Any, Dict
 from uuid import UUID, uuid4
 
 import websockets
+from pydantic import TypeAdapter, ValidationError
 from websockets.client import ClientConnection
 from websockets.exceptions import WebSocketException
 
@@ -34,6 +35,8 @@ class MCPClient:
         self._connection: ClientConnection | None = None
         self._listener_task: asyncio.Task | None = None
         self._pending_requests: Dict[UUID, asyncio.Future] = {}
+        # Create a TypeAdapter for robust parsing of the response Union type.
+        self._server_message_adapter = TypeAdapter(ServerMessage)
 
     async def connect(self):
         """
@@ -87,12 +90,14 @@ class MCPClient:
         try:
             async for message_json in self._connection:
                 try:
-                    # pydantic will parse into the correct Union member
-                    response = ServerMessage.model_validate_json(message_json)
-                    print(f"reach here")
+                    # Use the TypeAdapter for robust discriminated union parsing
+                    response = self._server_message_adapter.validate_json(message_json)
                     correlation_id = response.header.correlation_id
-                except Exception:
-                    print(f"Warning: Received invalid message: {message_json}")
+                except ValidationError as e:
+                    # Log the specific validation error for better debugging.
+                    print(
+                        f"Warning: Received invalid message: {message_json}. Error: {e}"
+                    )
                     continue  # Ignore malformed messages
 
                 future = self._pending_requests.pop(correlation_id, None)

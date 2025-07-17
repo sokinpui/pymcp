@@ -3,16 +3,7 @@ from typing import Any, Literal, Union
 
 from pydantic import BaseModel
 
-from .base_msg import Error, Header, MCPResponse
-
-
-# Define specialized Header models for discriminated union
-class SuccessHeader(Header):
-    status: Literal["success"] = "success"
-
-
-class ErrorHeader(Header):
-    status: Literal["error"]
+from .base_msg import Error, MCPResponse
 
 
 # Tool Call Response
@@ -24,7 +15,7 @@ class ToolCallResponseBody(BaseModel):
 class ToolCallResponse(MCPResponse):
     """A response indicating a successful tool execution."""
 
-    header: SuccessHeader
+    status: Literal["success"] = "success"
     body: ToolCallResponseBody
     error: None = None
 
@@ -32,9 +23,10 @@ class ToolCallResponse(MCPResponse):
 class ErrorResponse(MCPResponse):
     """A response indicating an error occurred during processing."""
 
-    header: ErrorHeader
+    status: Literal["error"]
     body: None = None
     error: Error
 
 
+# This is now a valid discriminated union that Pydantic can parse automatically.
 ServerMessage = Union[ToolCallResponse, ErrorResponse]

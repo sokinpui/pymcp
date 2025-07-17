@@ -37,18 +37,18 @@ class Validator:
             # For Pydantic validation errors, we cannot reliably extract a correlation_id
             # as the header itself might be invalid. We use a "null" UUID.
             return ErrorResponse(
+                status="error",
                 header={
                     "correlation_id": "00000000-0000-0000-0000-000000000000",
-                    "status": "error",
                 },
                 error=Error(code="validation_error", message=str(e)),
             )
         except Exception as e:
             # Catch other potential parsing errors (e.g., invalid JSON).
             return ErrorResponse(
+                status="error",
                 header={
                     "correlation_id": "00000000-0000-0000-0000-000000000000",
-                    "status": "error",
                 },
                 error=Error(code="invalid_json", message=f"Could not parse message: {e}"),
             )

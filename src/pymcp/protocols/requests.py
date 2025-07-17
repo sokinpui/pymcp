@@ -1,9 +1,9 @@
 # src/pymcp/protocols/requests.py
 from typing import Any, Dict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from .base_msg import Header, MCPRequest
+from .base_msg import MCPRequest
 
 
 # Tool Call
@@ -13,7 +13,7 @@ class ToolCallRequestBody(BaseModel):
 
 
 class ToolCallRequest(MCPRequest):
-    header: Header = Field(default_factory=lambda: Header(status="success"))
+    # The header is inherited from MCPRequest and no longer needs a status.
     body: ToolCallRequestBody
 
 

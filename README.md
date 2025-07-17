@@ -134,7 +134,7 @@ def retrieve_data() -> str:
 
 ### Tool Repository discovery
 
-The server discovers tools by scanning all `.py` files within the directories specified by the `--tool-repo` CLI argument or the `PYMCP_USER_TOOL_REPOS` environment variable.
+The server discovers tools by scanning all `.py` files within the directories specified by the `--tool-repo` CLI argument or the `PYMCP_TOOL_REPOS` environment variable.
 
 You can organize your tools into multiple files and directories. The loader will scan them recursively.
 
@@ -257,4 +257,4 @@ PyMCP is designed to be simple, extensible, and easy to use. The server itself i
 
 No concept like "resources", "tools", or "prompts", since all of them are just a function that input something and return something. Everything is a tool. It leaves to user defining the scope of the tools.
 
-The internal tools like `list_tools_available` and `ping`, are also some type of "tools". Therefore it is very easy to extend the server capabilities.
+The internal tools like `list_tools_available` and `ping`, are also some type of "tools". Tools and Server are decoupled. core tools are like extension of the server.

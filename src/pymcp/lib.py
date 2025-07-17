@@ -86,7 +86,6 @@ async def start_server(
         else config.settings.user_tool_repos
     )
 
-    # The final list always includes the core tool repo.
     # Use dict.fromkeys to remove duplicates while preserving order.
     tool_repo_paths = list(
         dict.fromkeys([str(config.CORE_TOOL_REPOS_PATH)] + repos_to_load)

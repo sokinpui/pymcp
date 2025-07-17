@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # List of paths to user-defined tool directories.
     # In .env or environment variable, this can be a comma-separated string:
     # PYMCP_USER_TOOL_REPOS="/path/to/tools1,/path/to/tools2"
-    user_tool_repos: List[str] = []
+    tool_repos: List[str] = []
 
     # Logging level
     log_level: str = "INFO"

@@ -81,9 +81,7 @@ async def start_server(
     # If user_tool_repos is explicitly passed, it takes precedence over settings.
     # Otherwise, use the repos from the settings (env/.env file).
     repos_to_load = (
-        user_tool_repos
-        if user_tool_repos is not None
-        else config.settings.user_tool_repos
+        user_tool_repos if user_tool_repos is not None else config.settings.tool_repos
     )
 
     # Use dict.fromkeys to remove duplicates while preserving order.

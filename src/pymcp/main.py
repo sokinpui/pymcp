@@ -65,7 +65,9 @@ def run_cli():
     """
     Parses command-line arguments and runs the main server function.
     """
-    parser = argparse.ArgumentParser(description="PyMCP - Modern Context Protocol Server")
+    parser = argparse.ArgumentParser(
+        description="PyMCP - Modern Context Protocol Server"
+    )
     parser.add_argument(
         "--host",
         type=str,
@@ -99,7 +101,7 @@ def run_cli():
     # Combine tool repositories: Core + Configured (env/file) + CLI.
     # config.settings.user_tool_repos has repos from .env or env vars.
     # args.cli_tool_repos has repos from the command line.
-    all_user_repos = config.settings.user_tool_repos + args.cli_tool_repos
+    all_user_repos = config.settings.tool_repos + args.cli_tool_repos
 
     # The final list always includes the core tools path first.
     # Use dict.fromkeys to remove duplicates while preserving order.

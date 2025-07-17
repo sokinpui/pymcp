@@ -4,12 +4,16 @@ Main entry point and CLI for the PyMCP application.
 """
 import argparse
 import asyncio
+import logging
 from typing import List
 
 from pymcp import config
+from pymcp.logger import setup_logging
 from pymcp.server.server import MCPServer
 from pymcp.tools.loader import ToolLoader
 from pymcp.tools.registry import ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 
 async def main(host: str, port: int, tool_repos: List[str]):
@@ -39,21 +43,22 @@ async def main(host: str, port: int, tool_repos: List[str]):
     )
 
     tasks = [server_task, watcher_task]
-    print(
-        f"MCP Server and Tool Watcher are running on ws://{host}:{port}. Press Ctrl+C to stop."
+    logger.info(
+        "MCP Server and Tool Watcher are running on ws://%s:%s. Press Ctrl+C to stop.",
+        host,
+        port,
     )
 
     try:
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
-        print("\nShutdown signal received.")
+        logger.info("Shutdown signal received. Gracefully stopping...")
     finally:
-        print("Cancelling main tasks...")
         for task in tasks:
             if not task.done():
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
-        print("Application has shut down gracefully.")
+        logger.info("Application has shut down gracefully.")
 
 
 def run_cli():
@@ -79,11 +84,22 @@ def run_cli():
         dest="tool_repos",
         help="Path to a tool repository. Can be specified multiple times.",
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level (default: INFO)",
+    )
 
     args = parser.parse_args()
 
     # If --tool-repo is not specified, use the default from config
     tool_repos = args.tool_repos or config.TOOL_REPOS
+
+    # Configure logging for the entire application
+    log_level = getattr(logging, args.log_level.upper(), logging.INFO)
+    setup_logging(level=log_level)
 
     try:
         asyncio.run(main(host=args.host, port=args.port, tool_repos=tool_repos))

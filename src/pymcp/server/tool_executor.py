@@ -3,6 +3,7 @@
 Service responsible for executing tools.
 """
 import inspect
+import logging
 
 from pymcp.protocols.base_msg import Error
 from pymcp.protocols.requests import ToolCallRequest
@@ -13,6 +14,8 @@ from pymcp.protocols.responses import (
     ToolCallResponseBody,
 )
 from pymcp.tools.registry import Tool, ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ToolExecutor:
@@ -30,12 +33,17 @@ class ToolExecutor:
         and builds a response message.
         """
         tool_name = request.body.tool
+        correlation_id = request.header.correlation_id
+
         tool = self.tool_registry.get_tool(tool_name)
 
         if not tool:
+            logger.warning(
+                "Tool '%s' not found [correlation_id=%s]", tool_name, correlation_id
+            )
             return ErrorResponse(
                 status="error",
-                header={"correlation_id": request.header.correlation_id},
+                header={"correlation_id": correlation_id},
                 error=Error(
                     code="tool_not_found",
                     message=f"Tool '{tool_name}' not found.",
@@ -43,6 +51,9 @@ class ToolExecutor:
             )
 
         try:
+            logger.info(
+                "Executing tool '%s' [correlation_id=%s]", tool_name, correlation_id
+            )
             # Prepare arguments for execution.
             execution_args = request.body.args.copy()
 
@@ -56,18 +67,28 @@ class ToolExecutor:
 
             result = await tool.execute(**execution_args)
 
+            logger.debug(
+                "Tool '%s' executed successfully [correlation_id=%s]",
+                tool_name,
+                correlation_id,
+            )
             # status="success" is set by default in the ToolCallResponse model.
             return ToolCallResponse(
-                header={"correlation_id": request.header.correlation_id},
+                header={"correlation_id": correlation_id},
                 body=ToolCallResponseBody(tool=tool_name, result=result),
             )
-        except Exception as e:
-            # Provide a detailed error message for easier debugging.
+        except Exception:
+            # Using logger.exception automatically includes stack trace info.
+            logger.exception(
+                "Error executing tool '%s' [correlation_id=%s]",
+                tool_name,
+                correlation_id,
+            )
             return ErrorResponse(
                 status="error",
-                header={"correlation_id": request.header.correlation_id},
+                header={"correlation_id": correlation_id},
                 error=Error(
                     code="execution_error",
-                    message=f"Error executing tool '{tool_name}': {type(e).__name__}: {e}",
+                    message=f"An unexpected error occurred while executing tool '{tool_name}'.",
                 ),
             )

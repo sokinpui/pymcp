@@ -4,6 +4,7 @@ The main MCP server orchestrator.
 """
 
 import asyncio
+import logging
 from uuid import UUID
 
 import websockets
@@ -19,6 +20,8 @@ from .response_sender import ResponseSender
 from .router import Router
 from .tool_executor import ToolExecutor
 from .validator import Validator
+
+logger = logging.getLogger(__name__)
 
 
 class MCPServer:
@@ -50,12 +53,13 @@ class MCPServer:
         """
         Atomically updates the tool registry used by the tool executor.
         """
-        print("Server received updated tool registry.")
+        logger.info("Server is now using the updated tool registry.")
         self.tool_executor.tool_registry = new_registry
 
     async def _handler(self, websocket: ServerConnection):
         """The main WebSocket handler for each client connection."""
         connection_id = await self.connection_manager.connect(websocket)
+        remote_addr = websocket.remote_address
         try:
             async for message_json in websocket:
                 # Dynamically allocate a worker (task) for each message.
@@ -66,7 +70,19 @@ class MCPServer:
                 task.add_done_callback(self._running_tasks.discard)
 
         except websockets.exceptions.ConnectionClosedError:
-            print(f"Connection closed unexpectedly for {connection_id}")
+            logger.warning(
+                "Connection %s from %s:%s closed unexpectedly.",
+                connection_id,
+                remote_addr[0],
+                remote_addr[1],
+            )
+        except websockets.exceptions.ConnectionClosedOK:
+            logger.info(
+                "Connection %s from %s:%s closed.",
+                connection_id,
+                remote_addr[0],
+                remote_addr[1],
+            )
         finally:
             self.connection_manager.disconnect(connection_id)
 
@@ -101,19 +117,19 @@ class MCPServer:
         """Gracefully shuts down all client-processing tasks."""
         if not self._running_tasks:
             return
-        print(f"Shutting down {len(self._running_tasks)} client tasks...")
+        logger.info("Shutting down %d client tasks...", len(self._running_tasks))
         await asyncio.gather(*self._running_tasks, return_exceptions=True)
-        print("All client tasks completed.")
+        logger.info("All client tasks completed.")
 
     async def start(self):
         """Starts the WebSocket server and serves until cancelled."""
-        print(f"Starting MCP Server on ws://{self.host}:{self.port}")
+        logger.info("Starting MCP Server on ws://%s:%s", self.host, self.port)
         try:
             # The websockets.serve context manager handles server startup and shutdown.
             async with websockets.serve(self._handler, self.host, self.port):
                 await asyncio.Future()  # Run forever
         except asyncio.CancelledError:
-            print("Server shutdown signal received.")
+            logger.info("Server shutdown signal received.")
         finally:
             await self._shutdown_client_tasks()
-            print("Server has stopped.")
+            logger.info("Server has stopped.")

@@ -2,12 +2,15 @@
 """
 Component responsible for validating incoming client messages.
 """
+import logging
 
 from pydantic import ValidationError
 
 from pymcp.protocols.base_msg import Error
 from pymcp.protocols.requests import ClientMessage
 from pymcp.protocols.responses import ErrorResponse
+
+logger = logging.getLogger(__name__)
 
 
 class Validator:
@@ -30,12 +33,11 @@ class Validator:
             or an `ErrorResponse` if validation fails.
         """
         try:
-            # The `model_validate_json` on the Union type will dispatch
-            # to the correct Pydantic model based on the 'type' field.
             return ClientMessage.model_validate_json(message_json)
         except ValidationError as e:
             # For Pydantic validation errors, we cannot reliably extract a correlation_id
-            # as the header itself might be invalid. We use a "null" UUID.
+            # as the header itself might be invalid.
+            logger.warning("Validation failed for incoming message: %s", e)
             return ErrorResponse(
                 status="error",
                 header={
@@ -45,6 +47,7 @@ class Validator:
             )
         except Exception as e:
             # Catch other potential parsing errors (e.g., invalid JSON).
+            logger.error("Failed to parse incoming JSON message: %s", e)
             return ErrorResponse(
                 status="error",
                 header={

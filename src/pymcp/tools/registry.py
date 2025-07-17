@@ -1,9 +1,12 @@
 # src/pymcp/tools/registry.py
 import asyncio
 import inspect
+import logging
 from typing import Any, Callable, Dict, List, final
 
 from pymcp.protocols.tools_def import ToolArgument, ToolDefinition
+
+logger = logging.getLogger(__name__)
 
 
 @final
@@ -90,7 +93,7 @@ class ToolRegistry:
             raise ValueError(
                 f"Tool name collision: A tool named '{tool.name}' is already registered."
             )
-        print(f"Registering tool: {tool.name}")
+        logger.debug("Registering tool: %s", tool.name)
         self._tools[tool.name] = tool
 
     def get_tool(self, name: str) -> Tool | None:
@@ -103,4 +106,3 @@ class ToolRegistry:
             [tool.get_definition() for tool in self._tools.values()],
             key=lambda t: t.name,
         )
-

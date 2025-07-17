@@ -3,12 +3,15 @@
 Library interface for programmatically controlling the PyMCP server.
 """
 import asyncio
+import logging
 from typing import List, Optional
 
 from . import config
 from .server.server import MCPServer
 from .tools.loader import ToolLoader
 from .tools.registry import ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ServerHandle:
@@ -26,12 +29,12 @@ class ServerHandle:
         """
         Requests a graceful shutdown of the server and the tool watcher.
         """
-        print("Shutdown requested via library handle.")
+        logger.info("Shutdown requested via library handle.")
         for task in self._tasks:
             if not task.done():
                 task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
-        print("Server and watcher have been stopped.")
+        logger.info("Server and watcher have been stopped.")
 
     async def wait_closed(self):
         """
@@ -88,8 +91,11 @@ async def start_server(
         tool_loader.watch(on_registry_update), name="ToolWatcher_Lib"
     )
 
-    print(
-        f"MCP Server and Tool Watcher started programmatically on ws://{server_host}:{server_port}"
+    logger.info(
+        "MCP Server and Tool Watcher started programmatically on ws://%s:%s",
+        server_host,
+        server_port,
     )
 
     return ServerHandle(server_task=server_task, watcher_task=watcher_task)
+

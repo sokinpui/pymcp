@@ -5,6 +5,7 @@ Service for discovering, loading, and hot-reloading tools.
 import asyncio
 import importlib.util
 import inspect
+import logging
 import sys
 from pathlib import Path
 from typing import Awaitable, Callable, Dict, List
@@ -14,6 +15,8 @@ from watchdog.observers import Observer
 
 from .decorators import TOOL_METADATA_ATTR
 from .registry import Tool, ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ToolChangeHandler(FileSystemEventHandler):
@@ -37,7 +40,9 @@ class ToolChangeHandler(FileSystemEventHandler):
         if self._stopping or event.is_directory or not event.src_path.endswith(".py"):
             return
 
-        print(f"Change detected in '{Path(event.src_path).name}'. Scheduling reload...")
+        logger.info(
+            "Change detected in '%s'. Scheduling reload...", Path(event.src_path).name
+        )
         # Use call_soon_threadsafe to delegate to the event loop thread
         self._loop.call_soon_threadsafe(self._handle_debounce)
 
@@ -80,20 +85,21 @@ class ToolLoader:
         """
         Scans tool repositories, loads modules, and builds a new ToolRegistry.
         """
-        print("Building new tool registry...")
+        logger.info("Building new tool registry...")
         registry = ToolRegistry()
         self._invalidate_module_cache()
 
         for repo_path in self._repo_paths:
             if not repo_path.is_dir():
-                print(f"Warning: Tool repository path not found: {repo_path}")
+                logger.warning("Tool repository path not found: %s", repo_path)
                 continue
 
             for file_path in repo_path.glob("**/*.py"):
                 self._load_tools_from_file(file_path, registry)
 
-        print(
-            f"Registry build complete. {len(registry.get_all_definitions())} tools loaded."
+        logger.info(
+            "Registry build complete. %d tools loaded.",
+            len(registry.get_all_definitions()),
         )
         return registry
 
@@ -130,7 +136,7 @@ class ToolLoader:
                     )
                     registry.register(tool_instance)
         except Exception as e:
-            print(f"Error loading tools from {file_path}: {e}")
+            logger.error("Error loading tools from %s: %s", file_path, e)
 
     async def watch(self, on_update: Callable[[ToolRegistry], Awaitable[None]]):
         """
@@ -143,10 +149,10 @@ class ToolLoader:
         loop = asyncio.get_running_loop()
 
         async def _reload_and_notify():
-            print("Starting tool reload...")
+            logger.info("Starting tool reload...")
             new_registry = self.load_registry()
             await on_update(new_registry)
-            print("Tool reload complete. Server is using updated tools.")
+            logger.info("Tool reload complete. Server is using updated tools.")
 
         event_handler = ToolChangeHandler(loop, _reload_and_notify)
         observer = Observer()
@@ -154,18 +160,19 @@ class ToolLoader:
         for path in self._repo_paths:
             if path.is_dir():
                 observer.schedule(event_handler, str(path), recursive=True)
-                print(f"Watching for tool changes in: {path}")
+                logger.info("Watching for tool changes in: %s", path)
 
         observer.start()
         try:
             # Run the watcher thread until this task is cancelled
             await asyncio.Future()
         except asyncio.CancelledError:
-            print("Stopping tool watcher...")
+            logger.info("Stopping tool watcher...")
         finally:
             # Prevent new reloads and stop the observer thread
             event_handler.stop()
             observer.stop()
             # Run the blocking join() in an executor to avoid stalling the event loop
             await loop.run_in_executor(None, observer.join)
-            print("Tool watcher stopped.")
+            logger.info("Tool watcher stopped.")
+

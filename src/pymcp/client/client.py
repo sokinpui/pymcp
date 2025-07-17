@@ -3,6 +3,7 @@
 The official asynchronous client for the PyMCP protocol.
 """
 import asyncio
+import logging
 from typing import Any, Dict
 from uuid import UUID, uuid4
 
@@ -16,6 +17,8 @@ from pymcp.protocols.requests import ToolCallRequest, ToolCallRequestBody
 from pymcp.protocols.responses import ErrorResponse, ServerMessage, ToolCallResponse
 
 from .exceptions import ConnectionFailedError, MCPClientError, ToolExecutionError
+
+logger = logging.getLogger(__name__)
 
 
 class MCPClient:
@@ -95,15 +98,18 @@ class MCPClient:
                     correlation_id = response.header.correlation_id
                 except ValidationError as e:
                     # Log the specific validation error for better debugging.
-                    print(
-                        f"Warning: Received invalid message: {message_json}. Error: {e}"
+                    logger.warning(
+                        "Failed to parse server message: %s. Raw message: %s",
+                        e,
+                        message_json,
                     )
                     continue  # Ignore malformed messages
 
                 future = self._pending_requests.pop(correlation_id, None)
                 if not future or future.done():
-                    print(
-                        f"Warning: Received unsolicited response for {correlation_id}"
+                    logger.warning(
+                        "Received unsolicited response for correlation_id: %s",
+                        correlation_id,
                     )
                     continue
 
@@ -117,9 +123,9 @@ class MCPClient:
 
         except websockets.exceptions.ConnectionClosed:
             pass  # Expected when the connection is closed
-        except Exception as e:
-            # A critical error in the listener should be logged
-            print(f"Error in response listener: {e}")
+        except Exception:
+            # A critical error in the listener should be logged with its traceback.
+            logger.exception("Unhandled exception in client listener task")
         finally:
             # Ensure all pending requests are cleaned up on exit
             if self._pending_requests:
@@ -175,3 +181,4 @@ class MCPClient:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
+
